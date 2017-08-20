@@ -1,0 +1,6 @@
+[submodule "cmudict"]
+	path = cmudict
+	url = https://github.com/cmusphinx/cmudict.git
+[submodule "lingtools"]
+	path = lingtools
+	url = https://github.com/lingtools/lingtools.git
