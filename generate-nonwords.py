@@ -1,4 +1,5 @@
 import sys
+import re
 import pickle
 import random
 
@@ -117,9 +118,12 @@ def select_element(seq):
 
 def generate_list(onsets, vowels, codas, cmudict, 
                   numsyl, numwords, first_syl_stress,
-                  includesylbreaks):
+                  onsetre, vowelre, codare,
+                  includesylbreaks,norhyme,stressrhyme):
     wordcount = 0
     nonwords = []
+    if norhyme:
+        rhymes = []
     curonsets = [(x,onsets[x]) for x in onsets]
     curcodas = [(x,codas[x]) for x in codas]
     while wordcount < numwords:
@@ -137,15 +141,27 @@ def generate_list(onsets, vowels, codas, cmudict,
                              if x[-1] != '1']
             myonset = select_element(curonsets)
             myvowel = select_element(curvowels)
-            if myvowel[-1] == '1':
-                hadstress = 1
             mycoda = select_element(curcodas)
-            if includesylbreaks:
-                curword += myonset + myvowel + mycoda + '-'
-            else:
-                curword += myonset + myvowel + mycoda 
-
-            sylcount += 1
+            if norhyme:
+                if ((stressrhyme and myvowel[-1] == '1') or
+                    (not stressrhyme and sylcount == numsyl - 1)):
+                    while myvowel + mycoda in rhymes:
+                        myvowel = select_element(curvowels)
+                        mycoda = select_element(curcodas)
+                        if stressrhyme and myvowel[-1] != '1':
+                            break
+            if (onsetre.match(myonset) is not None and
+                vowelre.match(myvowel) is not None and
+                codare.match(mycoda) is not None):
+                if myvowel[-1] == '1':
+                    hadstress = 1
+                if includesylbreaks:
+                    curword += myonset + myvowel + mycoda + '-'
+                else:
+                    curword += myonset + myvowel + mycoda
+                if norhyme:
+                    rhymes.append(myvowel + mycoda)
+                sylcount += 1
         if includesylbreaks:
             curword = curword[:-1]
         if curword not in cmudict and curword not in nonwords:
@@ -159,6 +175,11 @@ if __name__ == '__main__':
     firststress = True
     includesylbreaks = True
     outfilename = ''
+    onsetre = re.compile('.*')
+    vowelre = re.compile('.*')
+    codare = re.compile('.*')
+    norhyme = False
+    stressrhyme = True
     for arg in sys.argv:
         s = arg.split('=')
         if s[0] == 'numsyl':
@@ -177,6 +198,25 @@ if __name__ == '__main__':
             outfilename = s[1]
         elif s[0] == 'nobreaks':
             includesylbreaks = False
+        elif s[0] == 'norhyme':
+            norhyme = True
+        elif s[0] == 'nostressrhyme':
+            stressrhyme = False
+        elif s[0] == 'onset':
+            try:
+                onsetre = re.compile(s[1])
+            except:
+                print('Your onset flag must be a valid regular expression.')
+        elif s[0] == 'vowel':
+            try:
+                vowelre = re.compile(s[1])
+            except:
+                print('Your vowel flag must be a valid regular expression.')
+        elif s[0] == 'coda':
+            try:
+                codare = re.compile(s[1])
+            except:
+                print('Your coda flag must be a valid regular expression.')
     vowel_list = get_vowel_list()
     vowel_list = get_vowel_list()
     try:
@@ -187,7 +227,8 @@ if __name__ == '__main__':
         onsets, vowels, codas, cmudict_bkwd = init(vowel_list)
     mylist = generate_list(onsets, vowels, codas, cmudict_bkwd,
                            numsyl, numwords, firststress,
-                           includesylbreaks)
+                           onsetre, vowelre, codare,
+                           includesylbreaks, norhyme, stressrhyme)
     if outfilename != '':
         with open(outfilename, 'w') as outfile:
             for nonword in mylist:
