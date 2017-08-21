@@ -121,6 +121,7 @@ def generate_list(onsets, vowels, codas, cmudict,
                   onsetre, vowelre, codare,
                   includesylbreaks,norhyme,stressrhyme):
     wordcount = 0
+    tried = 0
     nonwords = []
     if norhyme:
         rhymes = []
@@ -142,10 +143,18 @@ def generate_list(onsets, vowels, codas, cmudict,
             myonset = select_element(curonsets)
             myvowel = select_element(curvowels)
             mycoda = select_element(curcodas)
+            tried += 1
+            if tried > 100000:
+                print("Too many attempts try to relax restrictions")
+                sys.exit()
             if norhyme:
                 if ((stressrhyme and myvowel[-1] == '1') or
                     (not stressrhyme and sylcount == numsyl - 1)):
                     while myvowel + mycoda in rhymes:
+                        tried += 1
+                        if tried > 100000:
+                            print("Too many attempts try to relax restrictions")
+                            sys.exit()
                         myvowel = select_element(curvowels)
                         mycoda = select_element(curcodas)
                         if stressrhyme and myvowel[-1] != '1':
